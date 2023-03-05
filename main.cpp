@@ -38,6 +38,21 @@ int* ReadNumbers(int size) {
     return nums;
 };
 
+bool WritePrimes(int size,int* nums) {
+    std::ofstream file(OUTFILE,std::ios::out);
+    if(file.bad()) {
+        printf("Failed to create %s\n",INFILE);
+        return 0;
+    }
+    for(int x = 0;x < size;x++) {
+        std::string num = std::to_string(nums[x]);
+        file<<num<<',';
+    }
+    file<<std::to_string(nums[size])<<std::endl;
+    file.close();
+    return 1;
+}
+
 int main(int argc,char* argv[]) {
     srand(time(NULL));
     int size = 50,limit = 1000;
@@ -58,5 +73,10 @@ int main(int argc,char* argv[]) {
         QUICKSORT
     ***
     */
+    bool flag2 = WritePrimes(size,nums);
+    if(!flag2) {
+        return EXIT_FAILURE;
+    }
+    delete []nums;
     return EXIT_SUCCESS;
 }
