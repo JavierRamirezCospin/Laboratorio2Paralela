@@ -3,7 +3,7 @@
 #include <time.h>
 #include <omp.h>
 
-#define TREESHOLD 10000
+#define TREESHOLD 5000
 
 int compare(const void * a, const void * b) {
     return (*(int*)a - *(int*)b);

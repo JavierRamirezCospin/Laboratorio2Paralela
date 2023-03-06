@@ -7,6 +7,67 @@
 #define INFILE "numbers.csv"
 #define OUTFILE "primes.csv"
 
+#define TREESHOLD 5000
+
+int compare(const void * a, const void * b) {
+    return (*(int*)a - *(int*)b);
+}
+void naive_qsort(int *data, int lo, int hi) //}, int (*compare)(const int *, const int*))
+{
+  if(lo > hi) return;
+  int l = lo;
+  int h = hi;
+  int p = data[(hi + lo)/2];
+
+  while(l <= h){
+    while((data[l] - p) < 0) l++;
+    while((data[h] - p) > 0) h--;
+    if(l<=h){
+      //swap
+      int tmp = data[l];
+      data[l] = data[h];
+      data[h] = tmp;
+      l++; h--;
+    }
+  }
+  //recursive call
+  naive_qsort(data, lo, h);
+  naive_qsort(data, l, hi);
+}
+
+void par_qsort(int *data, int lo, int hi) {
+    if (lo >= hi) return;
+
+    int l = lo, h = hi, p = data[(hi + lo) / 2];
+    while (l <= h) {
+        while (data[l] < p) l++;
+        while (data[h] > p) h--;
+        if (l <= h) {
+            int tmp = data[l];
+            data[l] = data[h];
+            data[h] = tmp;
+            l++; h--;
+        }
+    }
+
+    if ((h - lo) > TREESHOLD) {
+        #pragma omp task shared(data) firstprivate(lo, h)
+        par_qsort(data, lo, h);
+    } else {
+        naive_qsort(data, lo, h);
+    }
+
+    if ((hi - l) > TREESHOLD) {
+        #pragma omp task shared(data) firstprivate(l, hi)
+        par_qsort(data, l, hi);
+    } else {
+        naive_qsort(data, l, hi);
+    }
+
+    #pragma omp taskwait
+}
+
+
 void GenerateNumbers(int maxnum,int limit) {
     std::ofstream file;
     #pragma omp master
@@ -70,7 +131,7 @@ void WritePrimes(int size,int* nums) {
 int main(int argc,char* argv[]) {
     srand(time(NULL));
     int size = 50,limit = 1000;
-    int num_thds = 1;
+    int num_thds = 8;
     if(argc > 3) {
         size = (int)strtol(argv[1],NULL,10);
         limit = (int)strtol(argv[2],NULL,10);
@@ -87,6 +148,11 @@ int main(int argc,char* argv[]) {
         QUICKSORT
     ***
     */
+   #pragma omp parallel shared(nums) num_threads(num_thds)
+    {
+        #pragma omp single
+        par_qsort(nums, 0, size - 1);
+    }
     #pragma omp parallel num_threads(size)
     WritePrimes(size,nums);
 
