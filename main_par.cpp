@@ -12,6 +12,7 @@
 int compare(const void * a, const void * b) {
     return (*(int*)a - *(int*)b);
 }
+
 void naive_qsort(int *data, int lo, int hi) //}, int (*compare)(const int *, const int*))
 {
   if(lo > hi) return;
@@ -66,7 +67,6 @@ void par_qsort(int *data, int lo, int hi) {
 
     #pragma omp taskwait
 }
-
 
 void GenerateNumbers(int maxnum,int limit) {
     std::ofstream file;
@@ -129,6 +129,8 @@ void WritePrimes(int size,int* nums) {
 }
 
 int main(int argc,char* argv[]) {
+    double init, end;
+    init = omp_get_wtime();
     srand(time(NULL));
     int size = 50,limit = 1000;
     int num_thds = 8;
@@ -143,12 +145,8 @@ int main(int argc,char* argv[]) {
     GenerateNumbers(size,limit);
 
     ReadNumbers(size,nums);
-    /* 
-    ***
-        QUICKSORT
-    ***
-    */
-   #pragma omp parallel shared(nums) num_threads(num_thds)
+    
+    #pragma omp parallel shared(nums) num_threads(num_thds)
     {
         #pragma omp single
         par_qsort(nums, 0, size - 1);
@@ -157,5 +155,7 @@ int main(int argc,char* argv[]) {
     WritePrimes(size,nums);
 
     delete []nums;
+    end = omp_get_wtime();
+    printf("Execution time: %.7lf s\n",end-init);
     return EXIT_SUCCESS;
 }

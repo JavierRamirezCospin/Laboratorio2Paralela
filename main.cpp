@@ -12,11 +12,11 @@ bool GenerateNumbers(int maxnum,int limit) {
         printf("Failed to create %s\n",INFILE);
         return 0;
     }
-    for(int x = 0;x<maxnum;x++) {
+    for(int x = 0;x<maxnum-1;x++) {
         std::string num = std::to_string(rand() % limit + 1);
         file<<num<<",";
     }
-    file<<maxnum<<std::endl;
+    file<<std::to_string(rand() % limit + 1)<<std::endl;
     file.close();
     return 1;
 };
@@ -44,11 +44,11 @@ bool WritePrimes(int size, int* nums) {
         printf("Failed to create %s\n", OUTFILE);
         return 0;
     }
-    for (int x = 0; x < size; x++) {
+    for (int x = 0; x < size-1; x++) {
         std::string num = std::to_string(nums[x]);
         file << num << ",";
     }
-    file << std::to_string(nums[size]) << std::endl;
+    file << std::to_string(nums[size-1]) << std::endl;
     file.close();
     return 1;
 }
@@ -77,6 +77,8 @@ void naive_qsort(int *data, int lo, int hi) //}, int (*compare)(const int *, con
 }
 
 int main(int argc,char* argv[]) {
+    clock_t init, end;
+    init = clock();
     srand(time(NULL));
     int size = 50,limit = 1000;
     if(argc > 2) {
@@ -91,17 +93,15 @@ int main(int argc,char* argv[]) {
     if(nums == NULL) {
         return EXIT_FAILURE;
     }
-    /* 
-    ***
-        QUICKSORT
-    ***
-    */
-    // naive_qsort(nums,0,size-1);
+    
+    naive_qsort(nums,0,size-1);
 
     bool flag2 = WritePrimes(size,nums);
     if(!flag2) {
         return EXIT_FAILURE;
     }
     delete []nums;
+    end = clock();
+    printf("Execution time: %.7lf s\n",double(end-init)/CLOCKS_PER_SEC);
     return EXIT_SUCCESS;
 }
