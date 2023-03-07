@@ -3,14 +3,56 @@
 #include <fstream>
 #include <time.h>
 #include <omp.h>
+#define TREESHOLD 5000
 
 #define INFILE "numbers.csv"
 #define OUTFILE "primes.csv"
 
-#define TREESHOLD 5000
+bool GenerateNumbers(int maxnum,int limit) {
+    std::ofstream file(INFILE,std::ios::out);
+    if(file.bad()) {
+        printf("Failed to create %s\n",INFILE);
+        return 0;
+    }
+    for(int x = 0;x<maxnum-1;x++) {
+        std::string num = std::to_string(rand() % limit + 1);
+        file<<num<<",";
+    }
+    file<<std::to_string(rand() % limit + 1)<<std::endl;
+    file.close();
+    return 1;
+};
 
-int compare(const void * a, const void * b) {
-    return (*(int*)a - *(int*)b);
+int* ReadNumbers(int size) {
+    std::ifstream file;
+    file.open(INFILE);
+    if(file.bad()) {
+        printf("Could not read/open '%s'",INFILE);
+        return nullptr;
+    }
+    int* nums = new int[size];
+    int i = 0;
+    std::string num;
+    while(std::getline(file,num,',')) {
+        nums[i] = stoi(num);
+        i += 1;
+    }
+    return nums;
+};
+
+bool WritePrimes(int size, int* nums) {
+    std::ofstream file(OUTFILE, std::ios::out);
+    if (file.bad()) {
+        printf("Failed to create %s\n", OUTFILE);
+        return 0;
+    }
+    for (int x = 0; x < size-1; x++) {
+        std::string num = std::to_string(nums[x]);
+        file << num << ",";
+    }
+    file << std::to_string(nums[size-1]) << std::endl;
+    file.close();
+    return 1;
 }
 
 void naive_qsort(int *data, int lo, int hi) //}, int (*compare)(const int *, const int*))
@@ -65,97 +107,39 @@ void par_qsort(int *data, int lo, int hi) {
         naive_qsort(data, l, hi);
     }
 
-    #pragma omp taskwait
-}
-
-void GenerateNumbers(int maxnum,int limit) {
-    std::ofstream file;
-    #pragma omp master
-    {
-        file.open(INFILE,std::ios::out);
-    }
-    #pragma omp barrier
-    if(file.bad()) {
-        printf("Failed to create %s\n",INFILE);
-        exit(EXIT_FAILURE);
-    }
-    #pragma omp parallel
-    {
-        #pragma omp for ordered
-        for(int x = 0;x<maxnum-1;x++)
-            #pragma omp ordered
-            file<<std::to_string(rand() % limit + 1)<<",";
-    }
-    file<<std::to_string(rand() % limit + 1)<<std::endl;
-    file.close();
-};
-
-void ReadNumbers(int size,int* nums) {
-    std::ifstream file;
-    file.open(INFILE);
-    if(file.bad()) {
-        printf("Could not read/open '%s'",INFILE);
-        exit(EXIT_FAILURE);
-    }
-    int i = 0;
-    std::string num;
-    while(std::getline(file,num,',')) {
-        nums[i] = stoi(num);
-        i += 1;
-    }
-};
-
-void WritePrimes(int size,int* nums) {
-    std::ofstream file;
-    #pragma omp master
-    {
-        file.open(OUTFILE,std::ios::out);
-    }
-    #pragma omp barrier
-    if(file.bad()) {
-        printf("Failed to create %s\n",INFILE);
-        exit(EXIT_FAILURE);
-    }
-    #pragma omp parallel
-    {
-        int x;
-        #pragma omp for ordered private(x)
-        for(x = 0;x<size-1;x++)
-            #pragma omp ordered
-            file<<std::to_string(nums[x])<<",";
-    }
-    file<<std::to_string(nums[size-1])<<std::endl;
-    file.close();
 }
 
 int main(int argc,char* argv[]) {
     double init, end;
-    init = omp_get_wtime();
     srand(time(NULL));
-    int size = 50,limit = 1000;
-    int num_thds = 8;
-    if(argc > 3) {
+    int size = 5000000,limit = 1000;
+    int thread_num = 8;
+    if(argc > 2) {
         size = (int)strtol(argv[1],NULL,10);
-        limit = (int)strtol(argv[2],NULL,10);
-        num_thds = (int)strtol(argv[3],NULL,10);
+        limit = (int)strtol(argv[2],NULL,10); 
+        thread_num = (int)strtol(argv[3],NULL,10);
     }
-    int* nums = new int[size];
-
-    #pragma omp parallel num_threads(num_thds)
-    GenerateNumbers(size,limit);
-
-    ReadNumbers(size,nums);
-    
-    #pragma omp parallel shared(nums) num_threads(num_thds)
+    //using omp
+    init = omp_get_wtime();
+    bool flag = GenerateNumbers(size,limit);
+    if(!flag) {
+        return EXIT_FAILURE;
+    }
+    int* nums = ReadNumbers(size);
+    if(nums == NULL) {
+        return EXIT_FAILURE;
+    }
+    #pragma omp parallel num_threads(thread_num)
     {
         #pragma omp single
         par_qsort(nums, 0, size - 1);
     }
-    #pragma omp parallel num_threads(size)
-    WritePrimes(size,nums);
-
+    bool flag2 = WritePrimes(size,nums);
+    if(!flag2) {
+        return EXIT_FAILURE;
+    }
     delete []nums;
     end = omp_get_wtime();
-    printf("Execution time: %.7lf s\n",end-init);
+    printf("Execution time: %f s\n",end-init);
     return EXIT_SUCCESS;
 }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <time.h>
+#include <omp.h>
 
 #define INFILE "numbers.csv"
 #define OUTFILE "primes.csv"
@@ -77,14 +78,15 @@ void naive_qsort(int *data, int lo, int hi) //}, int (*compare)(const int *, con
 }
 
 int main(int argc,char* argv[]) {
-    clock_t init, end;
-    init = clock();
+    double init, end;
     srand(time(NULL));
-    int size = 50,limit = 1000;
+    int size = 5000000,limit = 1000;
     if(argc > 2) {
         size = (int)strtol(argv[1],NULL,10);
         limit = (int)strtol(argv[2],NULL,10); 
     }
+    //using omp
+    init = omp_get_wtime();
     bool flag = GenerateNumbers(size,limit);
     if(!flag) {
         return EXIT_FAILURE;
@@ -101,7 +103,7 @@ int main(int argc,char* argv[]) {
         return EXIT_FAILURE;
     }
     delete []nums;
-    end = clock();
-    printf("Execution time: %.7lf s\n",double(end-init)/CLOCKS_PER_SEC);
+    end = omp_get_wtime();
+    printf("Execution time: %f s\n",end-init);
     return EXIT_SUCCESS;
 }
